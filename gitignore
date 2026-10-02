@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# database (local, never push real family data)
+prisma/dev.db
+prisma/dev.db-journal
+data/
+*.db
+*.db-journal
+
+# env files (secrets stay local)
+.env
+.env*.local
+
+# logs
+npm-debug.log*
+*.log
+
+# misc
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

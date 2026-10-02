@@ -1,0 +1,23 @@
+services:
+  familienstammbaum:
+    container_name: familienstammbaum
+    # WICHTIG: "OWNER/REPO" durch deinen GitHub-Benutzernamen (klein geschrieben!)
+    # und Repo-Namen ersetzen, z. B. ghcr.io/torben0589/familienstammbaum:latest
+    image: ghcr.io/torben0589/familienstammbaum:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+
+  # Optional: prüft nächtlich auf neue Images in der GitHub Container Registry
+  # und aktualisiert den Container automatisch. Entfernen, falls nicht gewünscht.
+  watchtower:
+    container_name: familienstammbaum-watchtower
+    image: ghcr.io/nicholas-fedor/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 86400 familienstammbaum

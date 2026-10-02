@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSessionOrNull } from "@/lib/auth";
-import type { FamilyGraph } from "@/types";
+import type { FamilyGraph, Gender, PartnershipType, ChildRelationType } from "@/types";
 
 // Liefert den kompletten Beziehungsgraphen (Personen, Paare, Eltern-Kind-Links)
 // für die Baumansicht im Frontend.
@@ -21,7 +21,7 @@ export async function GET() {
       firstName: p.firstName,
       lastName: p.lastName,
       birthName: p.birthName,
-      gender: p.gender,
+      gender: p.gender as Gender,
       birthDate: p.birthDate,
       birthPlace: p.birthPlace,
       deathDate: p.deathDate,
@@ -32,7 +32,7 @@ export async function GET() {
     })),
     couples: couples.map((c) => ({
       id: c.id,
-      type: c.type,
+      type: c.type as PartnershipType,
       startDate: c.startDate,
       startPlace: c.startPlace,
       endDate: c.endDate,
@@ -45,7 +45,7 @@ export async function GET() {
       childId: l.childId,
       parentId: l.parentId,
       coupleId: l.coupleId,
-      relation: l.relation
+      relation: l.relation as ChildRelationType
     }))
   };
 

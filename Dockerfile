@@ -1,16 +1,15 @@
 # syntax=docker/dockerfile:1
 
 # ---- Stage 1: Dependencies ----
-FROM node:20-alpine AS deps
-RUN apk add --no-cache openssl libc6-compat
+FROM node:20-bookworm-slim AS deps
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY prisma ./prisma
 RUN npm ci
 
 # ---- Stage 2: Build ----
-FROM node:20-alpine AS builder
-RUN apk add --no-cache openssl libc6-compat
+FROM node:20-bookworm-slim AS builder
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -21,13 +20,13 @@ RUN npx prisma generate
 RUN npm run build
 
 # ---- Stage 3: Runtime ----
-FROM node:20-alpine AS runner
-RUN apk add --no-cache openssl libc6-compat
+FROM node:20-bookworm-slim AS runner
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup -S familie && adduser -S familie -G familie
+RUN groupadd -r familie && useradd -r -g familie familie
 RUN mkdir -p /app/data && chown -R familie:familie /app/data
 
 COPY --from=builder /app/public ./public

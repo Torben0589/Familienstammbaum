@@ -1,0 +1,222 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { computeTreeLayout } from "@/lib/treeLayout";
+import { fullName, lifeSpan, initials } from "@/lib/utils";
+import { PersonPicker } from "@/components/people/PersonPicker";
+import type { FamilyGraph, PersonDTO } from "@/types";
+
+const COL_WIDTH = 210;
+const ROW_HEIGHT = 190;
+const CARD_WIDTH = 168;
+const CARD_HEIGHT = 92;
+const PADDING = 80;
+
+const genderRing: Record<string, string> = {
+  MALE: "ring-sky-300",
+  FEMALE: "ring-rose-300",
+  OTHER: "ring-violet-300",
+  UNKNOWN: "ring-ink-900/10"
+};
+
+export function TreeView({ graph }: { graph: FamilyGraph }) {
+  const [rootId, setRootId] = useState<string | undefined>(undefined);
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: PADDING, y: PADDING });
+  const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
+
+  const nodeByPerson = useMemo(() => new Map(nodes.map((n) => [n.person.id, n])), [nodes]);
+
+  const minGen = nodes.length ? Math.min(...nodes.map((n) => n.generation)) : 0;
+  const maxCol = nodes.length ? Math.max(...nodes.map((n) => n.column)) : 0;
+  const maxGen = nodes.length ? Math.max(...nodes.map((n) => n.generation)) : 0;
+
+  const contentWidth = (maxCol + 1) * COL_WIDTH + PADDING * 2;
+  const contentHeight = (maxGen - minGen + 1) * ROW_HEIGHT + PADDING * 2;
+
+  function posOf(personId: string) {
+    const n = nodeByPerson.get(personId);
+    if (!n) return { x: 0, y: 0 };
+    return {
+      x: n.column * COL_WIDTH,
+      y: (n.generation - minGen) * ROW_HEIGHT
+    };
+  }
+
+  function onWheel(e: React.WheelEvent) {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.001;
+    setScale((s) => Math.min(2, Math.max(0.35, s + delta)));
+  }
+
+  function onMouseDown(e: React.MouseEvent) {
+    dragState.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
+    setIsDragging(true);
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!dragState.current) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+    setPan({ x: dragState.current.panX + dx / scale, y: dragState.current.panY + dy / scale });
+  }
+  function onMouseUp() {
+    dragState.current = null;
+    setIsDragging(false);
+  }
+
+  // Alle Verbindungslinien vorberechnen (Partner-Linien + Eltern-Kind-Linien).
+  const partnerLines: { x1: number; y1: number; x2: number; y2: number; key: string }[] = [];
+  const childLines: { path: string; key: string }[] = [];
+  const seenPartnerPairs = new Set<string>();
+
+  for (const n of nodes) {
+    const basePos = posOf(n.person.id);
+
+    for (const partnerId of n.partnerIds) {
+      const pairKey = [n.person.id, partnerId].sort().join("|");
+      if (seenPartnerPairs.has(pairKey)) continue;
+      seenPartnerPairs.add(pairKey);
+      const partnerPos = posOf(partnerId);
+      partnerLines.push({
+        x1: basePos.x + CARD_WIDTH,
+        y1: basePos.y + CARD_HEIGHT / 2,
+        x2: partnerPos.x,
+        y2: partnerPos.y + CARD_HEIGHT / 2,
+        key: pairKey
+      });
+    }
+
+    if (n.parentIds.length > 0) {
+      let anchorX: number;
+      let anchorY: number;
+      if (n.parentCoupleId && n.parentIds.length >= 1) {
+        const xs = n.parentIds.map((pid) => posOf(pid).x + CARD_WIDTH / 2);
+        anchorX = xs.reduce((a, b) => a + b, 0) / xs.length;
+        anchorY = Math.min(...n.parentIds.map((pid) => posOf(pid).y)) + CARD_HEIGHT;
+      } else {
+        const pid = n.parentIds[0];
+        const pp = posOf(pid);
+        anchorX = pp.x + CARD_WIDTH / 2;
+        anchorY = pp.y + CARD_HEIGHT;
+      }
+      const childX = basePos.x + CARD_WIDTH / 2;
+      const childY = basePos.y;
+      const midY = anchorY + (childY - anchorY) / 2;
+      childLines.push({
+        key: `${n.person.id}-parents`,
+        path: `M ${anchorX} ${anchorY} C ${anchorX} ${midY}, ${childX} ${midY}, ${childX} ${childY}`
+      });
+    }
+  }
+
+  return (
+    <div className="pt-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Stammbaum</h1>
+          <p className="text-ink-500 mt-1 text-sm">
+            Ziehen zum Verschieben, Mausrad zum Zoomen. Klicke auf eine Person für Details.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="w-64">
+            <PersonPicker
+              placeholder="Person als Mittelpunkt wählen…"
+              onSelect={(p: PersonDTO) => setRootId(p.id)}
+            />
+          </div>
+          {rootId && (
+            <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setRootId(undefined)}>
+              Zurücksetzen
+            </button>
+          )}
+          <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.min(2, s + 0.15))}>
+            ➕
+          </button>
+          <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.max(0.35, s - 0.15))}>
+            ➖
+          </button>
+        </div>
+      </div>
+
+      {nodes.length === 0 ? (
+        <div className="glass-card p-10 text-center text-ink-500">
+          Noch keine Personen vorhanden. Lege zuerst Personen unter „Personen“ an.
+        </div>
+      ) : (
+        <div
+          className="glass-card overflow-hidden relative"
+          style={{ height: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
+          onWheel={onWheel}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+        >
+          <div
+            style={{
+              position: "absolute",
+              transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+              transformOrigin: "0 0",
+              width: contentWidth,
+              height: contentHeight
+            }}
+          >
+            <svg
+              width={contentWidth}
+              height={contentHeight}
+              className="absolute inset-0 pointer-events-none"
+            >
+              {partnerLines.map((l) => (
+                <line
+                  key={l.key}
+                  x1={l.x1}
+                  y1={l.y1}
+                  x2={l.x2}
+                  y2={l.y2}
+                  stroke="#ffb347"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  opacity={0.6}
+                />
+              ))}
+              {childLines.map((l) => (
+                <path key={l.key} d={l.path} fill="none" stroke="#a78bfa" strokeWidth={2.5} opacity={0.55} />
+              ))}
+            </svg>
+
+            {nodes.map((n) => {
+              const pos = posOf(n.person.id);
+              return (
+                <Link
+                  key={n.person.id}
+                  href={`/people/${n.person.id}`}
+                  style={{
+                    position: "absolute",
+                    left: pos.x,
+                    top: pos.y,
+                    width: CARD_WIDTH,
+                    height: CARD_HEIGHT
+                  }}
+                  className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-shadow ring-2 ${genderRing[n.person.gender] ?? ""}`}
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-glow to-lavender-glow text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                    {initials(n.person)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-ink-900 truncate">{fullName(n.person)}</div>
+                    <div className="text-xs text-ink-500 truncate">{lifeSpan(n.person)}</div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

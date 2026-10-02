@@ -1,5 +1,10 @@
 // Prisma Schema - Familienstammbaum
 // Datenbank: SQLite (lokal auf dem Raspberry Pi, Datei liegt im ./data Volume)
+//
+// Hinweis: SQLite unterstützt in Prisma keine nativen "enum"-Typen.
+// Die frueheren Enums (Gender, PartnershipType, ChildRelationType) wurden
+// daher durch String-Felder ersetzt. Die Gueltigkeit der Werte wird weiterhin
+// ueber Zod in den API-Routen geprueft (siehe src/app/api/**).
 
 generator client {
   provider      = "prisma-client-js"
@@ -11,7 +16,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Ein Benutzerkonto der Familie. Alle Benutzer haben gleiche Rechte (kein Rollensystem).
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -20,27 +24,19 @@ model User {
   createdAt    DateTime @default(now())
 }
 
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
-  UNKNOWN
-}
-
-// Eine Person im Stammbaum
 model Person {
   id          String   @id @default(cuid())
   firstName   String
   lastName    String
-  birthName   String? // Geburtsname, falls abweichend vom Nachnamen
-  gender      Gender   @default(UNKNOWN)
-  birthDate   String? // als Freitext/ISO gespeichert, da oft nur Jahr/ungefähr bekannt
+  birthName   String?
+  gender      String   @default("UNKNOWN")
+  birthDate   String?
   birthPlace  String?
   deathDate   String?
   deathPlace  String?
-  occupation  String? // Beruf
+  occupation  String?
   notes       String?
-  photoUrl    String? // vorbereitet für später, aktuell ungenutzt
+  photoUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -52,21 +48,13 @@ model Person {
   @@index([lastName, firstName])
 }
 
-enum PartnershipType {
-  MARRIED
-  PARTNERED
-  DIVORCED
-  SEPARATED
-}
-
-// Verbindung zwischen zwei Personen (Paar/Ehe), dient auch als Eltern-Gruppierung
 model Couple {
-  id        String          @id @default(cuid())
-  type      PartnershipType @default(MARRIED)
-  startDate String?
+  id         String  @id @default(cuid())
+  type       String  @default("MARRIED")
+  startDate  String?
   startPlace String?
-  endDate   String?
-  notes     String?
+  endDate    String?
+  notes      String?
 
   parent1Id String
   parent1   Person @relation("Parent1", fields: [parent1Id], references: [id], onDelete: Cascade)
@@ -80,22 +68,15 @@ model Couple {
   @@unique([parent1Id, parent2Id])
 }
 
-enum ChildRelationType {
-  BIOLOGICAL
-  ADOPTED
-  STEP
-}
-
-// Eltern-Kind-Beziehung. coupleId optional, falls nur ein Elternteil bekannt ist (dann über parentId direkt)
 model ParentChild {
-  id       String            @id @default(cuid())
+  id       String  @id @default(cuid())
   childId  String
-  child    Person            @relation("ChildLink", fields: [childId], references: [id], onDelete: Cascade)
+  child    Person  @relation("ChildLink", fields: [childId], references: [id], onDelete: Cascade)
   parentId String
-  parent   Person            @relation("ParentLink", fields: [parentId], references: [id], onDelete: Cascade)
+  parent   Person  @relation("ParentLink", fields: [parentId], references: [id], onDelete: Cascade)
   coupleId String?
-  couple   Couple?           @relation(fields: [coupleId], references: [id], onDelete: SetNull)
-  relation ChildRelationType @default(BIOLOGICAL)
+  couple   Couple? @relation(fields: [coupleId], references: [id], onDelete: SetNull)
+  relation String  @default("BIOLOGICAL")
 
   @@unique([childId, parentId])
 }

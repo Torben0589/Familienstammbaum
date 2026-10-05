@@ -24,7 +24,14 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [rootId, setRootId] = useState<string | undefined>(undefined);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
-  const dragState = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const dragState = useRef<{
+  pointerId: number;
+  startX: number;
+  startY: number;
+  panX: number;
+  panY: number;
+  moved: boolean;
+} | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
@@ -53,20 +60,61 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     setScale((s) => Math.min(2, Math.max(0.35, s + delta)));
   }
 
-  function onMouseDown(e: React.MouseEvent) {
-    dragState.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
-    setIsDragging(true);
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+
+  e.currentTarget.setPointerCapture(e.pointerId);
+
+  dragState.current = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    panX: pan.x,
+    panY: pan.y,
+    moved: false
+  };
+
+  setIsDragging(true);
+}
+
+function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+  const drag = dragState.current;
+
+  if (!drag || drag.pointerId !== e.pointerId) return;
+
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+
+  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+    drag.moved = true;
   }
-  function onMouseMove(e: React.MouseEvent) {
-    if (!dragState.current) return;
-    const dx = e.clientX - dragState.current.startX;
-    const dy = e.clientY - dragState.current.startY;
-    setPan({ x: dragState.current.panX + dx / scale, y: dragState.current.panY + dy / scale });
+
+  setPan({
+    x: drag.panX + dx / scale,
+    y: drag.panY + dy / scale
+  });
+}
+
+function onPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
+  if (dragState.current?.pointerId !== e.pointerId) return;
+
+  if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+    e.currentTarget.releasePointerCapture(e.pointerId);
   }
-  function onMouseUp() {
+
+  setIsDragging(false);
+
+  window.setTimeout(() => {
     dragState.current = null;
-    setIsDragging(false);
+  }, 0);
+}
+
+function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+  if (dragState.current?.moved) {
+    e.preventDefault();
+    e.stopPropagation();
   }
+}
 
   // Alle Verbindungslinien vorberechnen (Partner-Linien + Eltern-Kind-Linien).
   const partnerLines: { x1: number; y1: number; x2: number; y2: number; key: string }[] = [];
@@ -148,15 +196,20 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           Noch keine Personen vorhanden. Lege zuerst Personen unter „Personen“ an.
         </div>
       ) : (
-        <div
-          className="glass-card overflow-hidden relative"
-          style={{ height: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
-          onWheel={onWheel}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-        >
+<div
+  className="glass-card overflow-hidden relative select-none"
+  style={{
+    height: "70vh",
+    cursor: isDragging ? "grabbing" : "grab",
+    touchAction: "none"
+  }}
+  onWheel={onWheel}
+  onPointerDown={onPointerDown}
+  onPointerMove={onPointerMove}
+  onPointerUp={onPointerEnd}
+  onPointerCancel={onPointerEnd}
+  onClickCapture={onTreeClickCapture}
+>
           <div
             style={{
               position: "absolute",

@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/dashboard", label: "Start", icon: "🏠" },
-  { href: "/tree", label: "Baum", icon: "🌳" },
-  { href: "/people", label: "Personen", icon: "👥" },
-  { href: "/settings", label: "Mehr", icon: "⚙️" }
+  { href: "/dashboard", label: "Start" },
+  { href: "/tree", label: "Baum" },
+  { href: "/people", label: "Personen" },
+  { href: "/settings", label: "Mehr" }
 ];
 
 export function MobileNav() {
@@ -23,11 +23,10 @@ export function MobileNav() {
             key={link.href}
             href={link.href}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium",
+              "flex-1 flex flex-col items-center justify-center text-xs font-medium",
               active ? "text-ink-900" : "text-ink-500"
             )}
           >
-            <span className="text-lg">{link.icon}</span>
             {link.label}
           </Link>
         );

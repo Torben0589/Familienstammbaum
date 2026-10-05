@@ -114,7 +114,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   }
 
   return (
-    <div className="pt-6 space-y-4">
+    <div className="pt-16 md:pt-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">Stammbaum</h1>
@@ -122,10 +122,10 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
             Ziehen zum Verschieben, Mausrad zum Zoomen. Klicke auf eine Person für Details.
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <div className="w-64">
             <PersonPicker
-              placeholder="Person als Mittelpunkt wählen…"
+              placeholder="Person auswählen…"
               onSelect={(p: PersonDTO) => setRootId(p.id)}
             />
           </div>

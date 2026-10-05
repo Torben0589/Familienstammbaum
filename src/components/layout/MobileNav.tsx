@@ -23,7 +23,7 @@ export function MobileNav() {
             key={link.href}
             href={link.href}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center text-xs font-medium",
+              "flex-1 flex items-center justify-center text-base font-semibold py-4",
               active ? "text-ink-900" : "text-ink-500"
             )}
           >

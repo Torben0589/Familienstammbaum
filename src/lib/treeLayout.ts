@@ -147,7 +147,7 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
 
     columnOf.set(personId, myCol);
     if (partnerId && !columnOf.has(partnerId)) {
-      columnOf.set(partnerId, myCol + 0.6);
+      columnOf.set(partnerId, myCol + 1.0);
     }
     return myCol;
   }

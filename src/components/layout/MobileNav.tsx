@@ -28,4 +28,10 @@ export function MobileNav() {
             )}
           >
             <span className="text-lg">{link.icon}</span>
-           
+            {link.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

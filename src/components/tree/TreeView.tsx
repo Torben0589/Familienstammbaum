@@ -7,7 +7,7 @@ import { fullName, lifeSpan, initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
 import type { FamilyGraph, PersonDTO } from "@/types";
 
-const COL_WIDTH = 210;
+const COL_WIDTH = 260;
 const ROW_HEIGHT = 190;
 const CARD_WIDTH = 168;
 const CARD_HEIGHT = 92;

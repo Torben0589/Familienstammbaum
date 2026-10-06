@@ -221,7 +221,9 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
       .filter((id) => id !== p.id);
 
     const parentEntries = parentsByChild.get(p.id) ?? [];
-    const parentCoupleLink = parentEntries[0];
+    const parentCoupleLink = parentEntries.find(
+  (entry) => entry.coupleId != null
+);
 
     return {
       person: p,

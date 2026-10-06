@@ -1,6 +1,6 @@
 "use client";
+/* eslint-disable @next/next/no-html-link-for-pages */
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
@@ -23,8 +23,10 @@ export function MobileNav() {
           const active =
             pathname === link.href || pathname?.startsWith(`${link.href}/`);
 
+          // Bewusst normales <a> statt next/link: erzwingt einen vollständigen
+          // Seitenaufruf und umgeht den Client-Router (Diagnose + Workaround).
           return (
-            <Link
+            <a
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
@@ -35,7 +37,7 @@ export function MobileNav() {
               }`}
             >
               {link.label}
-            </Link>
+            </a>
           );
         })}
       </div>

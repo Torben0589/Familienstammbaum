@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <MobileNav />
 
-        <main className="flex-1 px-4 md:px-8 pt-20 md:pt-0 pb-24 md:pb-10 min-w-0">
+        <main className="flex-1 px-4 md:px-8 pt-4 md:pt-0 pb-10 min-w-0">
           {children}
         </main>
       </div>

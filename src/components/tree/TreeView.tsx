@@ -12,6 +12,7 @@ const ROW_HEIGHT = 190;
 const CARD_WIDTH = 168;
 const CARD_HEIGHT = 92;
 const PADDING = 80;
+const DRAG_THRESHOLD = 5;
 
 const genderRing: Record<string, string> = {
   MALE: "ring-sky-300",
@@ -25,13 +26,13 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
   const dragState = useRef<{
-  pointerId: number;
-  startX: number;
-  startY: number;
-  panX: number;
-  panY: number;
-  moved: boolean;
-} | null>(null);
+    pointerId: number;
+    startX: number;
+    startY: number;
+    panX: number;
+    panY: number;
+    moved: boolean;
+  } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
@@ -60,61 +61,64 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     setScale((s) => Math.min(2, Math.max(0.35, s + delta)));
   }
 
+  // Kein Pointer-Capture beim Antippen: sonst wird der Klick auf die
+  // Personenkarten (Link) auf den Container umgeleitet und die Karte öffnet nicht.
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-  if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
 
-  e.currentTarget.setPointerCapture(e.pointerId);
-
-  dragState.current = {
-    pointerId: e.pointerId,
-    startX: e.clientX,
-    startY: e.clientY,
-    panX: pan.x,
-    panY: pan.y,
-    moved: false
-  };
-
-  setIsDragging(true);
-}
-
-function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-  const drag = dragState.current;
-
-  if (!drag || drag.pointerId !== e.pointerId) return;
-
-  const dx = e.clientX - drag.startX;
-  const dy = e.clientY - drag.startY;
-
-  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-    drag.moved = true;
+    dragState.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      panX: pan.x,
+      panY: pan.y,
+      moved: false
+    };
   }
 
-  setPan({
-    x: drag.panX + dx / scale,
-    y: drag.panY + dy / scale
-  });
-}
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragState.current;
 
-function onPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
-  if (dragState.current?.pointerId !== e.pointerId) return;
+    if (!drag || drag.pointerId !== e.pointerId) return;
 
-  if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+
+    if (!drag.moved) {
+      if (Math.abs(dx) <= DRAG_THRESHOLD && Math.abs(dy) <= DRAG_THRESHOLD) return;
+
+      // Erst jetzt ist es ein Ziehen: Pointer einfangen.
+      drag.moved = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+    }
+
+    setPan({
+      x: drag.panX + dx / scale,
+      y: drag.panY + dy / scale
+    });
   }
 
-  setIsDragging(false);
+  function onPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
+    if (dragState.current?.pointerId !== e.pointerId) return;
 
-  window.setTimeout(() => {
-    dragState.current = null;
-  }, 0);
-}
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
 
-function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
-  if (dragState.current?.moved) {
-    e.preventDefault();
-    e.stopPropagation();
+    setIsDragging(false);
+
+    window.setTimeout(() => {
+      dragState.current = null;
+    }, 0);
   }
-}
+
+  function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (dragState.current?.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
 
   // Alle Verbindungslinien vorberechnen (Partner-Linien + Eltern-Kind-Linien).
   const partnerLines: { x1: number; y1: number; x2: number; y2: number; key: string }[] = [];
@@ -162,7 +166,7 @@ function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
   }
 
   return (
-    <div className="pt-16 md:pt-6 space-y-4">
+    <div className="pt-4 md:pt-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">Stammbaum</h1>
@@ -196,20 +200,20 @@ function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
           Noch keine Personen vorhanden. Lege zuerst Personen unter „Personen“ an.
         </div>
       ) : (
-<div
-  className="glass-card overflow-hidden relative select-none"
-  style={{
-    height: "70vh",
-    cursor: isDragging ? "grabbing" : "grab",
-    touchAction: "none"
-  }}
-  onWheel={onWheel}
-  onPointerDown={onPointerDown}
-  onPointerMove={onPointerMove}
-  onPointerUp={onPointerEnd}
-  onPointerCancel={onPointerEnd}
-  onClickCapture={onTreeClickCapture}
->
+        <div
+          className="glass-card overflow-hidden relative select-none"
+          style={{
+            height: "70vh",
+            cursor: isDragging ? "grabbing" : "grab",
+            touchAction: "none"
+          }}
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          onClickCapture={onTreeClickCapture}
+        >
           <div
             style={{
               position: "absolute",

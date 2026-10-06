@@ -164,7 +164,52 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
   for (const p of orderedPeople) {
     if (!columnOf.has(p.id)) layoutPerson(p.id);
   }
+  // Abschließende Kollisionsprüfung:
+  // Innerhalb derselben Generation darf jede Spalte nur einmal belegt sein.
+  const peopleByGeneration = new Map<number, typeof graph.people>();
 
+  for (const person of graph.people) {
+    const personGeneration = generation.get(person.id) ?? 0;
+    const peopleInGeneration =
+      peopleByGeneration.get(personGeneration) ?? [];
+
+    peopleInGeneration.push(person);
+    peopleByGeneration.set(personGeneration, peopleInGeneration);
+  }
+
+  for (const peopleInGeneration of peopleByGeneration.values()) {
+    peopleInGeneration.sort((a, b) => {
+      const columnA = columnOf.get(a.id) ?? 0;
+      const columnB = columnOf.get(b.id) ?? 0;
+
+      if (columnA !== columnB) {
+        return columnA - columnB;
+      }
+
+      const yearA = yearOf(a.birthDate) ?? 9999;
+      const yearB = yearOf(b.birthDate) ?? 9999;
+
+      if (yearA !== yearB) {
+        return yearA - yearB;
+      }
+
+      return a.id.localeCompare(b.id);
+    });
+
+    const occupiedColumns = new Set<number>();
+
+    for (const person of peopleInGeneration) {
+      let column = columnOf.get(person.id) ?? 0;
+
+      while (occupiedColumns.has(column)) {
+        column += 1;
+      }
+
+      columnOf.set(person.id, column);
+      occupiedColumns.add(column);
+    }
+  }
+  
   const nodes: TreeNode[] = graph.people.map((p) => {
     const partnerIds = (couplesByPerson.get(p.id) ?? [])
       .map((cid) => {

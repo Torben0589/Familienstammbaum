@@ -22,7 +22,7 @@ import { yearOf } from "@/lib/utils";
 // Die Spalten sind Kommazahlen. Partner stehen enger zusammen als andere Karten.
 
 /** Abstand zwischen zwei Partnern einer Einheit (in Spalten). */
-const MEMBER_GAP = 0.7;
+const MEMBER_GAP = 0.9;
 /** Zusätzlicher Mindestabstand zwischen zwei Einheiten (in Spalten). */
 const UNIT_GAP = 1;
 /** Anzahl der Optimierungsdurchläufe (jeweils abwärts + aufwärts). */

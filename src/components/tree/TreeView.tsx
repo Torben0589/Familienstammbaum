@@ -458,6 +458,9 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     // Auf iOS direkt beim Pointer-Up navigieren. Dadurch sind weder ein
     // verzögerter synthetischer Klick noch langes Gedrückthalten nötig.
     e.preventDefault();
+    
+    alert(`EDIT ${personId}`);
+
     navigationHandledRef.current = true;
     router.push(`/people/${personId}/edit`);
   }

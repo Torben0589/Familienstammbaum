@@ -3,14 +3,17 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { computeTreeLayout } from "@/lib/treeLayout";
-import { fullName, lifeSpan, initials } from "@/lib/utils";
+import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
 import type { FamilyGraph, PersonDTO } from "@/types";
 
+// Kachelgröße: Vorname, Nachname, *Geburtsdatum, †Sterbedatum (4 Zeilen).
+// COL_WIDTH und MEMBER_GAP (treeLayout.ts) sind so gewählt, dass auch Partner
+// mit 0,8 Spalten Abstand (208 px) noch Platz für die Partnerlinie haben.
 const COL_WIDTH = 260;
 const ROW_HEIGHT = 190;
-const CARD_WIDTH = 168;
-const CARD_HEIGHT = 92;
+const CARD_WIDTH = 180;
+const CARD_HEIGHT = 104;
 const PADDING = 80;
 const DRAG_THRESHOLD = 5;
 
@@ -20,6 +23,21 @@ const genderRing: Record<string, string> = {
   OTHER: "ring-violet-300",
   UNKNOWN: "ring-ink-900/10"
 };
+
+// Gespeicherte Daten sind teils unscharf ("1955", "ca. 1920"). Vollständige Daten
+// (JJJJ-MM-TT) werden als TT.MM.JJJJ angezeigt, alles andere unverändert.
+function formatCardDate(value?: string | null): string {
+  const text = value?.trim();
+  if (!text || text === "?") return "";
+
+  const full = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (full) return `${full[3]}.${full[2]}.${full[1]}`;
+
+  const monthYear = text.match(/^(\d{4})-(\d{2})$/);
+  if (monthYear) return `${monthYear[2]}.${monthYear[1]}`;
+
+  return text;
+}
 
 export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [rootId, setRootId] = useState<string | undefined>(undefined);
@@ -296,6 +314,8 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
 
             {nodes.map((n) => {
               const pos = posOf(n.person.id);
+              const birth = formatCardDate(n.person.birthDate);
+              const death = formatCardDate(n.person.deathDate);
               return (
                 <Link
                   key={n.person.id}
@@ -312,9 +332,11 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-glow to-lavender-glow text-white flex items-center justify-center text-xs font-semibold shrink-0">
                     {initials(n.person)}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-ink-900 truncate">{fullName(n.person)}</div>
-                    <div className="text-xs text-ink-500 truncate">{lifeSpan(n.person)}</div>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <div className="text-sm font-semibold text-ink-900 truncate">{n.person.firstName}</div>
+                    <div className="text-sm font-semibold text-ink-900 truncate">{n.person.lastName}</div>
+                    {birth && <div className="text-xs text-ink-500 truncate mt-0.5">*{birth}</div>}
+                    {death && <div className="text-xs text-ink-500 truncate">†{death}</div>}
                   </div>
                 </Link>
               );

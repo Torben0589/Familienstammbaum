@@ -38,6 +38,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
 
   const nodeByPerson = useMemo(() => new Map(nodes.map((n) => [n.person.id, n])), [nodes]);
+  const coupleById = useMemo(() => new Map(graph.couples.map((c) => [c.id, c])), [graph.couples]);
 
   const minGen = nodes.length ? Math.min(...nodes.map((n) => n.generation)) : 0;
   const maxCol = nodes.length ? Math.max(...nodes.map((n) => n.column)) : 0;
@@ -128,40 +129,87 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   for (const n of nodes) {
     const basePos = posOf(n.person.id);
 
+    // Partnerlinie: immer von der rechten Kante der linken Karte
+    // zur linken Kante der rechten Karte.
     for (const partnerId of n.partnerIds) {
       const pairKey = [n.person.id, partnerId].sort().join("|");
       if (seenPartnerPairs.has(pairKey)) continue;
       seenPartnerPairs.add(pairKey);
+
       const partnerPos = posOf(partnerId);
+      const leftPos = basePos.x <= partnerPos.x ? basePos : partnerPos;
+      const rightPos = basePos.x <= partnerPos.x ? partnerPos : basePos;
+
       partnerLines.push({
-        x1: basePos.x + CARD_WIDTH,
-        y1: basePos.y + CARD_HEIGHT / 2,
-        x2: partnerPos.x,
-        y2: partnerPos.y + CARD_HEIGHT / 2,
+        x1: leftPos.x + CARD_WIDTH,
+        y1: leftPos.y + CARD_HEIGHT / 2,
+        x2: rightPos.x,
+        y2: rightPos.y + CARD_HEIGHT / 2,
         key: pairKey
       });
     }
 
     if (n.parentIds.length > 0) {
-      let anchorX: number;
-      let anchorY: number;
-      if (n.parentCoupleId && n.parentIds.length >= 1) {
-        const xs = n.parentIds.map((pid) => posOf(pid).x + CARD_WIDTH / 2);
-        anchorX = xs.reduce((a, b) => a + b, 0) / xs.length;
-        anchorY = Math.min(...n.parentIds.map((pid) => posOf(pid).y)) + CARD_HEIGHT;
-      } else {
-        const pid = n.parentIds[0];
-        const pp = posOf(pid);
-        anchorX = pp.x + CARD_WIDTH / 2;
-        anchorY = pp.y + CARD_HEIGHT;
+      // Elterngruppe bestimmen: bevorzugt die beiden Partner der gespeicherten
+      // Partnerschaft, sonst alle eingetragenen Eltern (nicht nur das erste Elternteil).
+      let parentGroup = n.parentIds;
+      const parentCouple = n.parentCoupleId ? coupleById.get(n.parentCoupleId) : undefined;
+      if (
+        parentCouple &&
+        nodeByPerson.has(parentCouple.parent1Id) &&
+        nodeByPerson.has(parentCouple.parent2Id)
+      ) {
+        parentGroup = [parentCouple.parent1Id, parentCouple.parent2Id];
       }
-      const childX = basePos.x + CARD_WIDTH / 2;
-      const childY = basePos.y;
-      const midY = anchorY + (childY - anchorY) / 2;
-      childLines.push({
-        key: `${n.person.id}-parents`,
-        path: `M ${anchorX} ${anchorY} C ${anchorX} ${midY}, ${childX} ${midY}, ${childX} ${childY}`
-      });
+
+      const parents = parentGroup
+        .filter((pid) => nodeByPerson.has(pid))
+        .map((pid) => posOf(pid))
+        .sort((a, b) => a.x - b.x);
+
+      if (parents.length > 0) {
+        const first = parents[0];
+        const last = parents[parents.length - 1];
+
+        // Standard: unten mittig zwischen den Elternkarten.
+        let anchorX = (first.x + last.x) / 2 + CARD_WIDTH / 2;
+        let anchorY = Math.max(...parents.map((p) => p.y)) + CARD_HEIGHT;
+
+        // Bei zwei Eltern nebeneinander: Linie startet in der Mitte der Partnerlinie.
+        if (parents.length >= 2 && Math.abs(first.y - last.y) < 1) {
+          const gapStart = first.x + CARD_WIDTH;
+          const gapEnd = last.x;
+
+          if (gapEnd > gapStart) {
+            const gapMiddle = (gapStart + gapEnd) / 2;
+
+            // Nur verwenden, wenn dort keine fremde Karte liegt.
+            const blocked = nodes.some((o) => {
+              if (parentGroup.includes(o.person.id)) return false;
+              const op = posOf(o.person.id);
+              return (
+                Math.abs(op.y - first.y) < 1 &&
+                op.x < gapMiddle + 1 &&
+                op.x + CARD_WIDTH > gapMiddle - 1
+              );
+            });
+
+            if (!blocked) {
+              anchorX = gapMiddle;
+              anchorY = first.y + CARD_HEIGHT / 2;
+            }
+          }
+        }
+
+        const childX = basePos.x + CARD_WIDTH / 2;
+        const childY = basePos.y;
+        const midY = anchorY + (childY - anchorY) / 2;
+
+        childLines.push({
+          key: `${n.person.id}-parents`,
+          path: `M ${anchorX} ${anchorY} C ${anchorX} ${midY}, ${childX} ${midY}, ${childX} ${childY}`
+        });
+      }
     }
   }
 

@@ -16,9 +16,9 @@ export default withAuth(
 );
 
 // Schützt alle Seiten außer Startseite (regelt Weiterleitung selbst), Login,
-// Setup, statische Assets und API-Auth-Routen.
+// Setup, statische Assets, App-Icons, Manifest und API-Auth-Routen.
 export const config = {
   matcher: [
-    "/((?!login|setup|api/auth|api/setup|_next/static|_next/image|favicon.ico|$).*)"
+    "/((?!login|setup|api/auth|api/setup|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|icon-192.png|icon-512.png|manifest.webmanifest|$).*)"
   ]
 };

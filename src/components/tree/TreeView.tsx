@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { computeTreeLayout } from "@/lib/treeLayout";
 import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
@@ -334,6 +335,7 @@ function formatCardDate(value?: string | null): string {
 }
 
 export function TreeView({ graph }: { graph: FamilyGraph }) {
+  const router = useRouter();
   const [rootId, setRootId] = useState<string | undefined>(undefined);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
@@ -345,6 +347,8 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     panY: number;
     moved: boolean;
   } | null>(null);
+  const justDraggedRef = useRef(false);
+  const navigationHandledRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
@@ -383,6 +387,8 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
+    justDraggedRef.current = false;
+    navigationHandledRef.current = false;
     dragState.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -406,6 +412,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
 
       // Erst jetzt ist es ein Ziehen: Pointer einfangen.
       drag.moved = true;
+      justDraggedRef.current = true;
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
     }
@@ -424,16 +431,42 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     }
 
     setIsDragging(false);
+    dragState.current = null;
 
-    window.setTimeout(() => {
-      dragState.current = null;
-    }, 0);
+    // Den nach einem echten Ziehen erzeugten Klick kurz blockieren.
+    if (justDraggedRef.current) {
+      window.setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 200);
+    }
   }
 
   function onTreeClickCapture(e: React.MouseEvent<HTMLDivElement>) {
-    if (dragState.current?.moved) {
+    if (justDraggedRef.current) {
       e.preventDefault();
       e.stopPropagation();
+    }
+  }
+
+  function onPersonPointerUp(
+    e: React.PointerEvent<HTMLAnchorElement>,
+    personId: string
+  ) {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== e.pointerId || drag.moved) return;
+
+    // Auf iOS direkt beim Pointer-Up navigieren. Dadurch sind weder ein
+    // verzögerter synthetischer Klick noch langes Gedrückthalten nötig.
+    e.preventDefault();
+    navigationHandledRef.current = true;
+    router.push(`/people/${personId}/edit`);
+  }
+
+  function onPersonClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (justDraggedRef.current || navigationHandledRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      navigationHandledRef.current = false;
     }
   }
 
@@ -443,7 +476,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">Stammbaum</h1>
           <p className="text-ink-500 mt-1 text-sm">
-            Ziehen zum Verschieben, Mausrad zum Zoomen. Klicke auf eine Person für Details.
+            Ziehen zum Verschieben, Mausrad zum Zoomen. Tippe auf eine Person zum Bearbeiten.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -536,14 +569,20 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
               return (
                 <Link
                   key={n.person.id}
-                  href={`/people/${n.person.id}`}
+                  href={`/people/${n.person.id}/edit`}
                   style={{
                     position: "absolute",
                     left: pos.x,
                     top: pos.y,
                     width: CARD_WIDTH,
-                    height: CARD_HEIGHT
+                    height: CARD_HEIGHT,
+                    WebkitTouchCallout: "none",
+                    WebkitUserSelect: "none",
+                    userSelect: "none"
                   }}
+                  onPointerUp={(e) => onPersonPointerUp(e, n.person.id)}
+                  onClick={onPersonClick}
+                  onDragStart={(e) => e.preventDefault()}
                   className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-shadow ring-2 ${genderRing[n.person.gender] ?? ""}`}
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-glow to-lavender-glow text-white flex items-center justify-center text-xs font-semibold shrink-0">

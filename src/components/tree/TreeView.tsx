@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { computeTreeLayout } from "@/lib/treeLayout";
 import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
@@ -335,7 +334,6 @@ function formatCardDate(value?: string | null): string {
 }
 
 export function TreeView({ graph }: { graph: FamilyGraph }) {
-  const router = useRouter();
   const [rootId, setRootId] = useState<string | undefined>(undefined);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
@@ -348,7 +346,6 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     moved: boolean;
   } | null>(null);
   const justDraggedRef = useRef(false);
-  const navigationHandledRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const { nodes } = useMemo(() => computeTreeLayout(graph, rootId), [graph, rootId]);
@@ -388,7 +385,6 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
     justDraggedRef.current = false;
-    navigationHandledRef.current = false;
     dragState.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -437,7 +433,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     if (justDraggedRef.current) {
       window.setTimeout(() => {
         justDraggedRef.current = false;
-      }, 200);
+      }, 300);
     }
   }
 
@@ -448,29 +444,23 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     }
   }
 
+  // Tipp auf eine Kachel: direkt beim Loslassen per harter Navigation öffnen.
+  // (router.push reagiert auf dem iPhone hier nicht zuverlässig.)
   function onPersonPointerUp(
     e: React.PointerEvent<HTMLAnchorElement>,
     personId: string
   ) {
     const drag = dragState.current;
     if (!drag || drag.pointerId !== e.pointerId || drag.moved) return;
-
-    // Auf iOS direkt beim Pointer-Up navigieren. Dadurch sind weder ein
-    // verzögerter synthetischer Klick noch langes Gedrückthalten nötig.
     e.preventDefault();
-    
-    alert(`EDIT ${personId}`);
-
-    navigationHandledRef.current = true;
-    router.push(`/people/${personId}/edit`);
+    window.location.assign(`/people/${personId}/edit`);
   }
 
+  // Der normale Link-Klick wird unterdrückt, damit nicht doppelt navigiert wird.
   function onPersonClick(e: React.MouseEvent<HTMLAnchorElement>) {
-    if (justDraggedRef.current || navigationHandledRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      navigationHandledRef.current = false;
-    }
+    e.preventDefault();
+    if (justDraggedRef.current) return;
+    window.location.assign(e.currentTarget.getAttribute("href") ?? "/");
   }
 
   return (

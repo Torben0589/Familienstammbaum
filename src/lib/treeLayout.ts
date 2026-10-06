@@ -139,7 +139,9 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
     let myCol: number;
     if (childIds.length > 0) {
       const childCols = childIds.map((cid) => layoutPerson(cid));
-      myCol = childCols.reduce((a, b) => a + b, 0) / childCols.length;
+      myCol = Math.round(
+  childCols.reduce((a, b) => a + b, 0) / childCols.length
+);
     } else {
       myCol = cursor;
       cursor += 1;

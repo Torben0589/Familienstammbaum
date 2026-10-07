@@ -13,8 +13,10 @@ import { yearOf } from "@/lib/utils";
 //  3. Generationen per Schichtung bestimmen: Kinder liegen immer unter ihren
 //     Eltern. Einheiten ohne bekannte Eltern (z. B. Schwiegereltern) werden
 //     direkt über ihre Kinder gesetzt und nicht ganz nach oben.
-//  4. Reihenfolge je Generation per Tiefensuche (Geschwister/Familienzweige
-//     bleiben zusammen).
+//  4. Reihenfolge je Generation nach Abstammungslinie: Ausgehend von der
+//     jüngsten Person steht auf jeder Ebene die Linie des Vaters links und die
+//     der Mutter rechts. Verwandte (Geschwister, Cousins, Onkel/Tanten) stehen
+//     bei der Linie, zu der sie gehören.
 //  5. Positionen per Mehrfach-Durchlauf: Kinder unter ihre Eltern, Eltern über
 //     ihre Kinder. Je Generation wird dabei der Mindestabstand garantiert, es
 //     kann also nie zwei überlappende Karten geben.
@@ -27,6 +29,12 @@ const MEMBER_GAP = 0.9;
 const UNIT_GAP = 1;
 /** Anzahl der Optimierungsdurchläufe (jeweils abwärts + aufwärts). */
 const SWEEPS = 8;
+/**
+ * Anordnung von links nach rechts, ausgehend von der jüngsten Person:
+ * true  = die Linie des Vaters steht links, die der Mutter rechts.
+ * false = umgekehrt.
+ */
+const FATHER_LINE_LEFT = true;
 
 interface Unit {
   id: number;
@@ -206,9 +214,101 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
   const byDefaultOrder = (a: string, b: string): number =>
     genderRank(a) - genderRank(b) || birthYear(a) - birthYear(b) || a.localeCompare(b);
 
+  // --- Abstammungslinien (links/rechts) ---------------------------------------
+  // Jede Person bekommt einen Linien-Schlüssel (kleine Zahl = weiter links).
+  // Die jüngste Person bekommt das Intervall [0, 1). Ihre beiden Eltern teilen
+  // sich dieses Intervall (Vater linke Hälfte, Mutter rechte Hälfte), deren Eltern
+  // teilen wiederum ihr Intervall usw. Der Schlüssel ist die Mitte des Intervalls.
+  // Alle anderen Personen erben den Schlüssel von ihren Eltern, Partnern oder Kindern:
+  //   Geschwister/Cousins -> Mittelwert der Eltern, Partner -> Schlüssel des Partners.
+  // Unabhängige Familien (nicht verbunden) werden rechts daneben angehängt.
+  const lineKey = new Map<string, number>();
+  const directLine = new Set<string>(); // direkte Vorfahren der jüngsten Person
+  const normKey = (v: number): number => Math.round(v * 1e9) / 1e9;
+  const meanOf = (values: number[]): number => values.reduce((a, b) => a + b, 0) / values.length;
+  const parentSide = (a: string, b: string): number =>
+    (FATHER_LINE_LEFT ? 1 : -1) * (genderRank(a) - genderRank(b)) ||
+    birthYear(a) - birthYear(b) ||
+    a.localeCompare(b);
+
+  // Zusammenhängende Verwandtschaften (über Eltern, Kinder, Partner).
+  const personComponents: string[][] = [];
+  {
+    const seenPerson = new Set<string>();
+    for (const p of people) {
+      if (seenPerson.has(p.id)) continue;
+      const comp = [p.id];
+      seenPerson.add(p.id);
+      for (let i = 0; i < comp.length; i += 1) {
+        const id = comp[i];
+        const next = [...(parentsOf.get(id) ?? []), ...(childrenOf.get(id) ?? []), ...(adjacency.get(id) ?? [])];
+        for (const n of next) {
+          if (seenPerson.has(n)) continue;
+          seenPerson.add(n);
+          comp.push(n);
+        }
+      }
+      personComponents.push(comp);
+    }
+  }
+  personComponents.sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]));
+
+  const ancestorCount = (id: string): number => {
+    const seen = new Set<string>();
+    const stack = [...(parentsOf.get(id) ?? [])];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      if (seen.has(cur) || cur === id) continue;
+      seen.add(cur);
+      stack.push(...(parentsOf.get(cur) ?? []));
+    }
+    return seen.size;
+  };
+
+  personComponents.forEach((comp, compIndex) => {
+    // Ausgangsperson: die Person der untersten Ebene (jüngste Generation) mit den meisten bekannten Vorfahren.
+    const lowest = Math.max(...comp.map(generationOf));
+    const focus = comp
+      .filter((id) => generationOf(id) === lowest)
+      .sort((a, b) => ancestorCount(b) - ancestorCount(a) || birthYear(b) - birthYear(a) || a.localeCompare(b))[0];
+
+    const queue: { id: string; lo: number; hi: number }[] = [{ id: focus, lo: compIndex, hi: compIndex + 1 }];
+    for (let i = 0; i < queue.length; i += 1) {
+      const { id, lo, hi } = queue[i];
+      if (lineKey.has(id)) continue; // Ahnenschwund: der kürzeste Weg gewinnt
+      lineKey.set(id, normKey((lo + hi) / 2));
+      directLine.add(id);
+      const parents = [...(parentsOf.get(id) ?? [])].sort(parentSide);
+      const width = (hi - lo) / Math.max(1, parents.length);
+      parents.forEach((pid, idx) => queue.push({ id: pid, lo: lo + idx * width, hi: lo + (idx + 1) * width }));
+    }
+  });
+
+  // Übrige Personen (Geschwister, Cousins, angeheiratete Personen ...).
+  const peopleTopDown = [...people].sort(
+    (a, b) => generationOf(a.id) - generationOf(b.id) || birthYear(a.id) - birthYear(b.id) || a.id.localeCompare(b.id)
+  );
+  for (let sweep = 0; sweep <= people.length; sweep += 1) {
+    let changed = false;
+    for (const p of peopleTopDown) {
+      if (lineKey.has(p.id)) continue;
+      const known = (ids: string[]) => ids.filter((id) => lineKey.has(id)).map((id) => lineKey.get(id)!);
+      let keys = known(parentsOf.get(p.id) ?? []);
+      if (keys.length === 0) keys = known(adjacency.get(p.id) ?? []);
+      if (keys.length === 0) keys = known(childrenOf.get(p.id) ?? []);
+      if (keys.length === 0) continue;
+      lineKey.set(p.id, normKey(meanOf(keys)));
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  for (const p of people) if (!lineKey.has(p.id)) lineKey.set(p.id, 0);
+
   function orderMembers(ids: string[]): string[] {
     if (ids.length <= 1) return [...ids];
-    if (ids.length === 2) return [...ids].sort(byDefaultOrder);
+    if (ids.length === 2) {
+      return [...ids].sort((a, b) => lineKey.get(a)! - lineKey.get(b)! || byDefaultOrder(a, b));
+    }
 
     // Kette: bei mehreren Partnern steht die Person mit mehreren Partnern in der Mitte.
     const inGroup = new Set(ids);
@@ -242,45 +342,20 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
   const minBirth = (u: Unit) => Math.min(...u.members.map(birthYear));
   const unitWidth = (u: Unit) => (u.members.length - 1) * MEMBER_GAP;
 
-  const childUnitsOf = (u: Unit): Unit[] => {
-    const childIds = new Set<string>();
-    for (const m of u.members) for (const c of childrenOf.get(m) ?? []) childIds.add(c);
-    const sorted = [...childIds].sort((a, b) => birthYear(a) - birthYear(b) || a.localeCompare(b));
-    const result: Unit[] = [];
-    for (const c of sorted) {
-      const cu = unitOf.get(c);
-      if (cu && cu !== u && !result.includes(cu)) result.push(cu);
-    }
-    return result;
-  };
-
   // ---------------------------------------------------------------------------
-  // 5. Reihenfolge je Generation (Tiefensuche, Blätter von links nach rechts)
+  // 5. Reihenfolge je Generation (nach Abstammungslinie, links -> rechts)
   // ---------------------------------------------------------------------------
+  // Eine Einheit steht an der Mitte der Linien-Schlüssel ihrer Mitglieder. Bei gleichem
+  // Schlüssel stehen Verwandte der linken Hälfte links neben der Hauptlinie, Verwandte
+  // der rechten Hälfte rechts daneben.
   const orderValue = new Map<Unit, number>();
-  const visiting = new Set<Unit>();
-  let cursor = 0;
-  const visit = (u: Unit): number => {
-    const known = orderValue.get(u);
-    if (known !== undefined) return known;
-    if (visiting.has(u)) return cursor;
-    visiting.add(u);
-    const kids = childUnitsOf(u);
-    let value: number;
-    if (kids.length > 0) {
-      const values = kids.map(visit);
-      value = values.reduce((a, b) => a + b, 0) / values.length;
-    } else {
-      value = cursor;
-      cursor += 1;
-    }
-    visiting.delete(u);
-    orderValue.set(u, value);
-    return value;
-  };
-  [...units]
-    .sort((a, b) => a.generation - b.generation || minBirth(a) - minBirth(b) || a.id - b.id)
-    .forEach((u) => visit(u));
+  const orderKind = new Map<Unit, number>();
+  for (const u of units) {
+    const key = normKey(meanOf(u.members.map((m) => lineKey.get(m) ?? 0)));
+    orderValue.set(u, key);
+    const isDirect = u.members.some((m) => directLine.has(m));
+    orderKind.set(u, isDirect ? 0 : key - Math.floor(key) < 0.5 ? -1 : 1);
+  }
 
   const rows = new Map<number, Unit[]>();
   for (const u of units) {
@@ -290,7 +365,11 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
   const generationsAsc = [...rows.keys()].sort((a, b) => a - b);
   for (const g of generationsAsc) {
     rows.get(g)!.sort(
-      (a, b) => orderValue.get(a)! - orderValue.get(b)! || minBirth(a) - minBirth(b) || a.id - b.id
+      (a, b) =>
+        orderValue.get(a)! - orderValue.get(b)! ||
+        orderKind.get(a)! - orderKind.get(b)! ||
+        minBirth(a) - minBirth(b) ||
+        a.id - b.id
     );
   }
 

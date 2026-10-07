@@ -511,7 +511,6 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   }, [highlightedId, nodeByPerson]);
 
   function selectSearchPerson(person: PersonDTO) {
-    setRootId(person.id);
     setHighlightedId(person.id);
   }
 
@@ -667,7 +666,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
       ) : (
         <div
           ref={viewportRef}
-          className="glass-card relative z-0 select-none"
+          className="glass-card relative z-0 overflow-hidden select-none"
           style={{
             height: "70vh",
             cursor: isDragging ? "grabbing" : "grab",

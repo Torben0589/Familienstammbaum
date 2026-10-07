@@ -5,7 +5,7 @@ import Link from "next/link";
 import { computeTreeLayout } from "@/lib/treeLayout";
 import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
-import type { CoupleDTO, FamilyGraph, PersonDTO, TreeNode } from "@/types";
+import type { CoupleDTO, FamilyGraph, PartnershipType, PersonDTO, TreeNode } from "@/types";
 
 // ROUTING-START
 // Kachelgröße: Vorname, Nachname, *Geburtsdatum, †Sterbedatum (4 Zeilen).
@@ -15,7 +15,6 @@ const CARD_WIDTH = 180;
 const CARD_HEIGHT = 104;
 const PADDING = 80;
 const DRAG_THRESHOLD = 5;
-
 /** Mindestabstand einer Linie zu einer Kachel (nur beim Umgehen mehrerer Zeilen). */
 const CARD_CLEARANCE = 14;
 /** Mindestabstand zweier Linien, die sich dieselbe Bahn zwischen den Zeilen teilen. */
@@ -127,11 +126,9 @@ function computeConnections(
       const pairKey = [n.person.id, partnerId].sort().join("|");
       if (seenPartnerPairs.has(pairKey)) continue;
       seenPartnerPairs.add(pairKey);
-
       const partnerPos = posOf(partnerId);
       const leftPos = basePos.x <= partnerPos.x ? basePos : partnerPos;
       const rightPos = basePos.x <= partnerPos.x ? partnerPos : basePos;
-
       partnerLines.push({
         x1: leftPos.x + CARD_WIDTH,
         y1: leftPos.y + CARD_HEIGHT / 2,
@@ -170,7 +167,6 @@ function computeConnections(
     if (parents.length >= 2 && Math.abs(first.y - last.y) < 1) {
       const gapStart = first.x + CARD_WIDTH;
       const gapEnd = last.x;
-
       if (gapEnd > gapStart) {
         const gapMiddle = (gapStart + gapEnd) / 2;
         const blocked = nodes.some((o) => {
@@ -182,7 +178,6 @@ function computeConnections(
             op.x + CARD_WIDTH > gapMiddle - 1
           );
         });
-
         if (!blocked) {
           anchorX = gapMiddle;
           anchorY = first.y + CARD_HEIGHT / 2;
@@ -283,7 +278,6 @@ function computeConnections(
   const childLines: ChildLine[] = [];
   for (const p of pending) {
     let points: Point[];
-
     if (p.childRow === p.parentRow + 1) {
       const y = busY(`d:${p.parentRow}:${p.anchorX}:${p.anchorY}`);
       points = [pt(p.anchorX, p.anchorY), pt(p.anchorX, y), pt(p.childX, y), pt(p.childX, p.childY)];
@@ -303,7 +297,6 @@ function computeConnections(
       // Ungewöhnliche Daten (Kind nicht unter den Eltern): einfache Linie.
       points = [pt(p.anchorX, p.anchorY), pt(p.childX, p.childY)];
     }
-
     childLines.push({ key: p.key, points, path: roundedPolyline(points, CORNER_RADIUS) });
   }
 
@@ -317,6 +310,109 @@ const genderRing: Record<string, string> = {
   OTHER: "ring-violet-300",
   UNKNOWN: "ring-ink-900/10"
 };
+
+// ---------------------------------------------------------------------------
+// Partnerschafts-Symbole (auf der Partnerlinie zwischen zwei Kacheln)
+//   Verheiratet   = zwei ineinander verschlungene Ringe, durchgezogene Linie
+//   Partnerschaft = Herz, durchgezogene Linie
+//   Getrennt      = zwei getrennte Ringe, gepunktete Linie
+//   Geschieden    = zwei Ringe mit rotem Schrägstrich, gestrichelte Linie
+// Ohne gespeicherte Partnerschaft (Typ unbekannt) bleibt die Linie wie bisher ohne Symbol.
+// ---------------------------------------------------------------------------
+const PARTNER_STYLE: Record<
+  PartnershipType,
+  { label: string; stroke: string; dash?: string; opacity: number }
+> = {
+  MARRIED: { label: "Verheiratet", stroke: "#ffb347", opacity: 0.6 },
+  PARTNERED: { label: "Partnerschaft", stroke: "#ffb347", opacity: 0.6 },
+  SEPARATED: { label: "Getrennt", stroke: "#94a3b8", dash: "1 7", opacity: 0.9 },
+  DIVORCED: { label: "Geschieden", stroke: "#94a3b8", dash: "8 6", opacity: 0.9 }
+};
+const PARTNER_TYPES_ORDER: PartnershipType[] = ["MARRIED", "PARTNERED", "SEPARATED", "DIVORCED"];
+/** Ist die Lücke zwischen zwei Partnerkacheln kleiner, wird kein Symbol gezeichnet. */
+const SYMBOL_MIN_GAP = 24;
+const SYMBOL_MAX_SIZE = 28;
+
+// Herz (Material-Icon, 24x24).
+const HEART_PATH =
+  "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+
+function PartnerSymbol({
+  type,
+  cx,
+  cy,
+  size
+}: {
+  type: PartnershipType;
+  cx: number;
+  cy: number;
+  size: number;
+}) {
+  const sw = Math.max(1.4, size * 0.07);
+  const backdrop = (
+    <rect
+      x={cx - size / 2}
+      y={cy - size * 0.4}
+      width={size}
+      height={size * 0.8}
+      rx={size * 0.4}
+      fill="white"
+      opacity={0.85}
+    />
+  );
+
+  if (type === "MARRIED" || type === "DIVORCED") {
+    const r = size * 0.27;
+    const d = size * 0.19;
+    const color = type === "MARRIED" ? "#d97706" : "#64748b";
+    return (
+      <g>
+        {backdrop}
+        <circle cx={cx - d} cy={cy} r={r} fill="none" stroke={color} strokeWidth={sw} />
+        <circle cx={cx + d} cy={cy} r={r} fill="none" stroke={color} strokeWidth={sw} />
+        {type === "DIVORCED" && (
+          <line
+            x1={cx - size * 0.3}
+            y1={cy + size * 0.3}
+            x2={cx + size * 0.3}
+            y2={cy - size * 0.3}
+            stroke="#e11d48"
+            strokeWidth={sw * 1.2}
+            strokeLinecap="round"
+          />
+        )}
+      </g>
+    );
+  }
+
+  if (type === "SEPARATED") {
+    const r = size * 0.22;
+    const d = r + size * 0.04;
+    return (
+      <g>
+        {backdrop}
+        <circle cx={cx - d} cy={cy} r={r} fill="none" stroke="#64748b" strokeWidth={sw} />
+        <circle cx={cx + d} cy={cy} r={r} fill="none" stroke="#64748b" strokeWidth={sw} />
+      </g>
+    );
+  }
+
+  if (type === "PARTNERED") {
+    const k = (size * 0.6) / 24;
+    return (
+      <g>
+        {backdrop}
+        <path
+          d={HEART_PATH}
+          fill="#fb7185"
+          transform={`translate(${round2(cx - 12 * k)} ${round2(cy - 12 * k)}) scale(${Math.round(k * 1000) / 1000})`}
+        />
+      </g>
+    );
+  }
+
+  return null;
+}
 
 // Gespeicherte Daten sind teils unscharf ("1955", "ca. 1920"). Vollständige Daten
 // (JJJJ-MM-TT) werden als TT.MM.JJJJ angezeigt, alles andere unverändert.
@@ -363,6 +459,28 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
     () => computeConnections(nodes, graph.couples, minGen),
     [nodes, graph.couples, minGen]
   );
+
+  // Partnerschaft je Personenpaar (Schlüssel wie bei den Partnerlinien: "idA|idB", sortiert).
+  // Gibt es mehrere Einträge für dasselbe Paar (z. B. erneut geheiratet), gewinnt der jüngste.
+  const coupleByPair = useMemo(() => {
+    const map = new Map<string, CoupleDTO>();
+    for (const c of graph.couples) {
+      const key = [c.parent1Id, c.parent2Id].sort().join("|");
+      const existing = map.get(key);
+      if (!existing || (c.startDate ?? "") >= (existing.startDate ?? "")) map.set(key, c);
+    }
+    return map;
+  }, [graph.couples]);
+
+  // Legende: nur die Arten, die im Baum tatsächlich vorkommen.
+  const legendTypes = useMemo(() => {
+    const present = new Set<string>();
+    for (const l of partnerLines) {
+      const type = coupleByPair.get(l.key)?.type;
+      if (type) present.add(type);
+    }
+    return PARTNER_TYPES_ORDER.filter((t) => present.has(t));
+  }, [partnerLines, coupleByPair]);
 
   function posOf(personId: string) {
     const n = nodeByPerson.get(personId);
@@ -471,7 +589,20 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           <p className="text-ink-500 mt-1 text-sm">
             Ziehen zum Verschieben, Mausrad zum Zoomen. Tippe auf eine Person zum Bearbeiten.
           </p>
+          {legendTypes.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-ink-500">
+              {legendTypes.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1">
+                  <svg width={34} height={24} viewBox="0 0 34 24" aria-hidden="true">
+                    <PartnerSymbol type={t} cx={17} cy={12} size={28} />
+                  </svg>
+                  {PARTNER_STYLE[t].label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <div className="w-64">
             <PersonPicker
@@ -479,14 +610,17 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
               onSelect={(p: PersonDTO) => setRootId(p.id)}
             />
           </div>
+
           {rootId && (
             <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setRootId(undefined)}>
               Zurücksetzen
             </button>
           )}
+
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.min(2, s + 0.15))}>
             ➕
           </button>
+
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.max(0.35, s - 0.15))}>
             ➖
           </button>
@@ -526,19 +660,25 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
               height={contentHeight}
               className="absolute inset-0 pointer-events-none"
             >
-              {partnerLines.map((l) => (
-                <line
-                  key={l.key}
-                  x1={l.x1}
-                  y1={l.y1}
-                  x2={l.x2}
-                  y2={l.y2}
-                  stroke="#ffb347"
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  opacity={0.6}
-                />
-              ))}
+              {partnerLines.map((l) => {
+                const type = coupleByPair.get(l.key)?.type;
+                const style = type ? PARTNER_STYLE[type] : undefined;
+                return (
+                  <line
+                    key={l.key}
+                    x1={l.x1}
+                    y1={l.y1}
+                    x2={l.x2}
+                    y2={l.y2}
+                    stroke={style?.stroke ?? "#ffb347"}
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeDasharray={style?.dash}
+                    opacity={style?.opacity ?? 0.6}
+                  />
+                );
+              })}
+
               {/* Gruppe mit Deckkraft: Wo sich Linien einer Familie überlagern, entsteht kein dunklerer Strich. */}
               <g opacity={0.55}>
                 {childLines.map((l) => (
@@ -553,6 +693,24 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                   />
                 ))}
               </g>
+
+              {/* Partnerschafts-Symbole: mittig über der Partnerlinie, damit die Kinderlinie frei bleibt. */}
+              {partnerLines.map((l) => {
+                const type = coupleByPair.get(l.key)?.type;
+                if (!type || !PARTNER_STYLE[type]) return null;
+                const gap = l.x2 - l.x1;
+                if (gap < SYMBOL_MIN_GAP) return null;
+                const size = Math.min(SYMBOL_MAX_SIZE, gap - 8);
+                return (
+                  <PartnerSymbol
+                    key={`${l.key}-symbol`}
+                    type={type}
+                    cx={(l.x1 + l.x2) / 2}
+                    cy={(l.y1 + l.y2) / 2 - size * 0.45 - 4}
+                    size={size}
+                  />
+                );
+              })}
             </svg>
 
             {nodes.map((n) => {

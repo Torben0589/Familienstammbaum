@@ -667,7 +667,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
       ) : (
         <div
           ref={viewportRef}
-          className="glass-card overflow-hidden relative select-none"
+          className="glass-card relative select-none"
           style={{
             height: "70vh",
             cursor: isDragging ? "grabbing" : "grab",

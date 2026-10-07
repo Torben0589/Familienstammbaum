@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import styles from "./historic-theme.module.css";
+import "./historic-theme.css";
 
 export type AppTheme = "modern" | "historic";
 
@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <div className={`${styles.themeRoot} ${ready ? styles.ready : ""}`}>
+      <div className={ready ? "theme-ready" : ""}>
         {children}
       </div>
     </ThemeContext.Provider>

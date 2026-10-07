@@ -140,11 +140,23 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. Generationen (Schichtung der Einheiten)
+  // 3. Generationen (feste Ebenen nach Verwandtschaftsgrad)
   // ---------------------------------------------------------------------------
+  // Jede Einheit bekommt ihre Ebene aus der Beziehung zu ihren Nachbarn:
+  //   Kind = Ebene der Eltern + 1, Partner = gleiche Ebene (liegen in einer Einheit).
+  // Ausgehend von einer Startperson wird die Ebene Schritt für Schritt über alle
+  // Beziehungen weitergegeben (Breitensuche). Dadurch stehen Geschwister, Cousins,
+  // Onkel/Tanten, Eltern und Großeltern immer genau auf der Ebene, die ihrem
+  // Verwandtschaftsgrad entspricht – egal, wie viele Vorfahren auf der anderen Seite
+  // der Familie bekannt sind. Bei widersprüchlichen Daten gewinnt der kürzeste Weg
+  // von der Startperson.
   const groupIds = [...groupMembers.keys()];
+  const relations = new Map<string, { to: string; delta: number }[]>();
+  const addRelation = (from: string, to: string, delta: number) => {
+    if (!relations.has(from)) relations.set(from, []);
+    relations.get(from)!.push({ to, delta });
+  };
   const edgeKeys = new Set<string>();
-  const edges: [string, string][] = [];
   for (const [childId, ids] of parentsOf) {
     for (const pid of ids) {
       const gp = find(pid);
@@ -153,34 +165,32 @@ export function computeTreeLayout(graph: FamilyGraph, rootId?: string): {
       const key = `${gp}>${gc}`;
       if (edgeKeys.has(key)) continue;
       edgeKeys.add(key);
-      edges.push([gp, gc]);
+      addRelation(gp, gc, 1); // Kind liegt eine Ebene unter den Eltern
+      addRelation(gc, gp, -1);
     }
   }
 
-  const rank = new Map<string, number>(groupIds.map((g) => [g, 0]));
-  for (let i = 0; i <= groupIds.length; i += 1) {
-    let changed = false;
-    for (const [gp, gc] of edges) {
-      const need = rank.get(gp)! + 1;
-      if (rank.get(gc)! < need) {
-        rank.set(gc, need);
-        changed = true;
+  const rank = new Map<string, number>();
+  const degree = (g: string): number => relations.get(g)?.length ?? 0;
+  const startOrder = [...groupIds].sort((a, b) => degree(b) - degree(a) || a.localeCompare(b));
+  if (rootId && personById.has(rootId)) startOrder.unshift(find(rootId));
+
+  for (const start of startOrder) {
+    if (rank.has(start)) continue;
+    // Eine zusammenhängende Verwandtschaft (Komponente) ausgehend von "start".
+    const component = [start];
+    rank.set(start, 0);
+    for (let i = 0; i < component.length; i += 1) {
+      const g = component[i];
+      for (const { to, delta } of relations.get(g) ?? []) {
+        if (rank.has(to)) continue;
+        rank.set(to, rank.get(g)! + delta);
+        component.push(to);
       }
     }
-    if (!changed) break;
-  }
-
-  // Einheiten ohne Eltern direkt über ihre Kinder setzen (nicht ganz nach oben).
-  const hasIncoming = new Set(edges.map((e) => e[1]));
-  const outgoing = new Map<string, string[]>();
-  for (const [gp, gc] of edges) {
-    if (!outgoing.has(gp)) outgoing.set(gp, []);
-    outgoing.get(gp)!.push(gc);
-  }
-  for (const g of groupIds) {
-    if (hasIncoming.has(g)) continue;
-    const kids = outgoing.get(g);
-    if (kids && kids.length > 0) rank.set(g, Math.min(...kids.map((k) => rank.get(k)!)) - 1);
+    // Oberste Ebene dieser Verwandtschaft = 0.
+    const top = Math.min(...component.map((g) => rank.get(g)!));
+    for (const g of component) rank.set(g, rank.get(g)! - top);
   }
 
   const rootOffset = rootId && personById.has(rootId) ? rank.get(find(rootId)) ?? 0 : 0;
@@ -462,4 +472,4 @@ export function minMaxGeneration(nodes: TreeNode[]): [number, number] {
     if (n.generation > max) max = n.generation;
   }
   return [min, max];
-}
+}

@@ -657,8 +657,8 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
         </div>
       </div>
 
-      {showStatistics && <div className="glass-card p-4"><h2 className="text-lg font-semibold text-ink-900 mb-3">Familienstatistik</h2><FamilyStatisticsPanel graph={graph} nodes={nodes} /></div>}
-      {showRelationship && <div className="glass-card p-4"><h2 className="text-lg font-semibold text-ink-900 mb-3">Verwandtschaftsrechner</h2><RelationshipCalculator graph={graph} /></div>}
+      {showStatistics && <div className="glass-card p-4 relative z-[99999]"><h2 className="text-lg font-semibold text-ink-900 mb-3">Familienstatistik</h2><FamilyStatisticsPanel graph={graph} nodes={nodes} /></div>}
+      {showRelationship && <div className="glass-card p-4 relative z-[99999]"><h2 className="text-lg font-semibold text-ink-900 mb-3">Verwandtschaftsrechner</h2><RelationshipCalculator graph={graph} /></div>}
 
       {nodes.length === 0 ? (
         <div className="glass-card p-10 text-center text-ink-500">
@@ -667,7 +667,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
       ) : (
         <div
           ref={viewportRef}
-          className="glass-card relative select-none"
+          className="glass-card relative z-0 select-none"
           style={{
             height: "70vh",
             cursor: isDragging ? "grabbing" : "grab",

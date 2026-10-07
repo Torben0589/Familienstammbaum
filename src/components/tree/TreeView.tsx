@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { computeTreeLayout } from "@/lib/treeLayout";
 import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
+import { FamilyStatisticsPanel } from "@/components/family/FamilyStatisticsPanel";
+import { RelationshipCalculator } from "@/components/family/RelationshipCalculator";
 import type { CoupleDTO, FamilyGraph, PartnershipType, PersonDTO, TreeNode } from "@/types";
 
 // ROUTING-START
@@ -431,6 +433,10 @@ function formatCardDate(value?: string | null): string {
 
 export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [rootId, setRootId] = useState<string | undefined>(undefined);
+  const [highlightedId, setHighlightedId] = useState<string | undefined>(undefined);
+  const [showStatistics, setShowStatistics] = useState(false);
+  const [showRelationship, setShowRelationship] = useState(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
   const dragState = useRef<{
@@ -489,6 +495,24 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
       x: n.column * COL_WIDTH,
       y: (n.generation - minGen) * ROW_HEIGHT
     };
+  }
+
+  useEffect(() => {
+    if (!highlightedId) return;
+    const viewport = viewportRef.current;
+    const pos = posOf(highlightedId);
+    if (!viewport || !nodeByPerson.has(highlightedId)) return;
+    const nextScale = Math.max(scale, 0.75);
+    setScale(nextScale);
+    setPan({
+      x: viewport.clientWidth / (2 * nextScale) - pos.x - CARD_WIDTH / 2,
+      y: viewport.clientHeight / (2 * nextScale) - pos.y - CARD_HEIGHT / 2
+    });
+  }, [highlightedId, nodeByPerson]);
+
+  function selectSearchPerson(person: PersonDTO) {
+    setRootId(person.id);
+    setHighlightedId(person.id);
   }
 
   function onWheel(e: React.WheelEvent) {
@@ -607,12 +631,12 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           <div className="w-64">
             <PersonPicker
               placeholder="Person auswählen…"
-              onSelect={(p: PersonDTO) => setRootId(p.id)}
+              onSelect={selectSearchPerson}
             />
           </div>
 
           {rootId && (
-            <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setRootId(undefined)}>
+            <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => { setRootId(undefined); setHighlightedId(undefined); }}>
               Zurücksetzen
             </button>
           )}
@@ -624,8 +648,17 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.max(0.35, s - 0.15))}>
             ➖
           </button>
+          <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setShowStatistics((v) => !v)}>
+            Statistik
+          </button>
+          <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setShowRelationship((v) => !v)}>
+            Verwandtschaft
+          </button>
         </div>
       </div>
+
+      {showStatistics && <div className="glass-card p-4"><h2 className="text-lg font-semibold text-ink-900 mb-3">Familienstatistik</h2><FamilyStatisticsPanel graph={graph} nodes={nodes} /></div>}
+      {showRelationship && <div className="glass-card p-4"><h2 className="text-lg font-semibold text-ink-900 mb-3">Verwandtschaftsrechner</h2><RelationshipCalculator graph={graph} /></div>}
 
       {nodes.length === 0 ? (
         <div className="glass-card p-10 text-center text-ink-500">
@@ -633,6 +666,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
         </div>
       ) : (
         <div
+          ref={viewportRef}
           className="glass-card overflow-hidden relative select-none"
           style={{
             height: "70vh",
@@ -734,7 +768,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                   onPointerUp={(e) => onPersonPointerUp(e, n.person.id)}
                   onClick={onPersonClick}
                   onDragStart={(e) => e.preventDefault()}
-                  className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-shadow ring-2 ${genderRing[n.person.gender] ?? ""}`}
+                  className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-all ring-2 ${genderRing[n.person.gender] ?? ""} ${highlightedId === n.person.id ? "ring-4 ring-amber-400 shadow-glow-lg scale-105 z-10" : ""}`}
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-glow to-lavender-glow text-white flex items-center justify-center text-xs font-semibold shrink-0">
                     {initials(n.person)}

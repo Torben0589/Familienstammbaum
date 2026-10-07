@@ -45,7 +45,7 @@ export function PersonPicker({
         placeholder={placeholder}
       />
       {open && results.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-2xl shadow-glow-lg border border-ink-900/5 max-h-60 overflow-y-auto">
+        <div className="absolute z-[9999] mt-1 w-full bg-white rounded-2xl shadow-glow-lg border border-ink-900/5 max-h-60 overflow-y-auto">
           {results.map((p) => (
             <button
               key={p.id}

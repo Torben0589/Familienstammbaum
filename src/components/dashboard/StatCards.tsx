@@ -19,7 +19,7 @@ export function StatCards({ stats }: { stats: Stat[] }) {
       {stats.map((s) => (
         <Card key={s.label} className={`!p-5 ${glowClass[s.glow]}`}>
           <div className="flex items-center gap-3">
-            <div className="text-2xl">{s.icon}</div>
+            <div className="text-2xl emoji-icon">{s.icon}</div>
             <div>
               <div className="text-2xl font-semibold text-ink-900">{s.value}</div>
               <div className="text-sm text-ink-500">{s.label}</div>

@@ -641,11 +641,11 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           )}
 
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.min(2, s + 0.15))}>
-            ➕
+            <span className="emoji-icon">➕</span>
           </button>
 
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setScale((s) => Math.max(0.35, s - 0.15))}>
-            ➖
+            <span className="emoji-icon">➖</span>
           </button>
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setShowStatistics((v) => !v)}>
             Statistik

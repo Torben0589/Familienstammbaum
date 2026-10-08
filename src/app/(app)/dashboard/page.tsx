@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   return (
     <div className="pt-6 space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Willkommen zurück 👋</h1>
+        <h1 className="text-2xl font-semibold text-ink-900">Willkommen zurück <span className="theme-icon-modern"><span className="emoji-icon">👋</span></span><span className="theme-icon-historic">❧</span></h1>
         <p className="text-ink-500 mt-1">Hier ist der aktuelle Stand eures Familienstammbaums.</p>
       </div>
 
@@ -55,13 +55,13 @@ export default async function DashboardPage() {
           <h2 className="font-semibold text-ink-900 mb-4">Schnellzugriff</h2>
           <div className="flex flex-col gap-3">
             <Link href="/tree" className="glow-button-secondary justify-start">
-              🌳 Stammbaum ansehen
+              <span className="emoji-icon">🌳</span> Stammbaum ansehen
             </Link>
             <Link href="/people/new" className="glow-button-secondary justify-start">
-              ➕ Neue Person anlegen
+              <span className="emoji-icon">➕</span> Neue Person anlegen
             </Link>
             <Link href="/settings" className="glow-button-secondary justify-start">
-              ⚙️ GEDCOM importieren / exportieren
+              <span className="emoji-icon">⚙️</span> GEDCOM importieren / exportieren
             </Link>
           </div>
         </Card>

@@ -108,10 +108,10 @@ export function PersonDetail({ personId }: { personId: string }) {
           </div>
           <div className="flex gap-2">
             <Link href={`/people/${personId}/edit`} className="glow-button-secondary !py-2 !px-4 text-sm">
-              ✏️ Bearbeiten
+              <span className="emoji-icon">✏️</span> Bearbeiten
             </Link>
             <Button variant="danger" className="!py-2 !px-4 text-sm" onClick={deletePerson}>
-              🗑️ Löschen
+              <span className="emoji-icon">🗑️</span> Löschen
             </Button>
           </div>
         </div>
@@ -120,7 +120,7 @@ export function PersonDetail({ personId }: { personId: string }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-ink-900">💍 Partnerschaften</h2>
+            <h2 className="font-semibold text-ink-900"><span className="emoji-icon">💍</span> Partnerschaften</h2>
             <button className="text-sm text-ink-700 underline" onClick={() => setModal("partner")}>
               + Hinzufügen
             </button>
@@ -148,7 +148,7 @@ export function PersonDetail({ personId }: { personId: string }) {
 
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-ink-900">⬆️ Eltern</h2>
+            <h2 className="font-semibold text-ink-900"><span className="emoji-icon">⬆️</span> Eltern</h2>
             <button className="text-sm text-ink-700 underline" onClick={() => setModal("parent")}>
               + Hinzufügen
             </button>
@@ -176,7 +176,7 @@ export function PersonDetail({ personId }: { personId: string }) {
 
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-ink-900">⬇️ Kinder</h2>
+            <h2 className="font-semibold text-ink-900"><span className="emoji-icon">⬇️</span> Kinder</h2>
             <button className="text-sm text-ink-700 underline" onClick={() => setModal("child")}>
               + Hinzufügen
             </button>

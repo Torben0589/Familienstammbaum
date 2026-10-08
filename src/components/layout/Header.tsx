@@ -7,7 +7,7 @@ export function Header() {
 
   return (
     <header className="flex items-center justify-between px-6 py-4">
-      <div className="md:hidden text-lg font-semibold text-ink-900">🌼 Familienstammbaum</div>
+      <div className="md:hidden text-lg font-semibold text-ink-900"><span className="theme-icon-modern"><span className="emoji-icon">🌼</span></span><span className="theme-icon-historic">❦</span> Familienstammbaum</div>
       <div className="ml-auto flex items-center gap-4">
         <span className="text-sm text-ink-700 hidden sm:inline">
           Angemeldet als <strong>{session?.user?.name ?? "..."}</strong>

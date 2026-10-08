@@ -134,10 +134,10 @@ export default function SettingsPage() {
         </p>
         <div className="flex flex-wrap gap-3">
           <a href="/api/gedcom/export" className="glow-button-secondary">
-            ⬇️ Als GEDCOM exportieren
+            <span className="emoji-icon">⬇️</span> Als GEDCOM exportieren
           </a>
           <label className="glow-button-secondary cursor-pointer">
-            ⬆️ GEDCOM importieren
+            <span className="emoji-icon">⬆️</span> GEDCOM importieren
             <input type="file" accept=".ged" className="hidden" onChange={handleImport} />
           </label>
         </div>

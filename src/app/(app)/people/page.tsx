@@ -10,7 +10,7 @@ export default function PeoplePage() {
           <p className="text-ink-500 mt-1">Alle Mitglieder eures Familienstammbaums.</p>
         </div>
         <Link href="/people/new" className="glow-button">
-          ➕ Neue Person
+          <span className="emoji-icon">➕</span> Neue Person
         </Link>
       </div>
       <PersonList />

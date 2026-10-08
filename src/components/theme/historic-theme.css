@@ -215,3 +215,156 @@ html[data-theme="historic"] h2 {
   font-weight: 400;
   letter-spacing: 0.01em;
 }
+
+html[data-theme="historic"] .theme-settings-copy p,
+html[data-theme="historic"] .theme-choice-text span {
+  color: var(--historic-ink);
+}
+
+html[data-theme="historic"] .theme-choice-text small {
+  color: var(--historic-muted);
+}
+
+/* Primäre Buttons: Siegellack-Optik statt Orange/Violett */
+html[data-theme="historic"] .glow-button {
+  color: #f7ecd0 !important;
+  border: 1px solid #4b2f1c !important;
+  background: linear-gradient(#8a5a37, #5e3a22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.35), 0 3px 8px rgba(65, 39, 20, 0.3) !important;
+  border-radius: 0.45rem !important;
+}
+
+/* Initialen-Kreise: Siegel statt Farbverlauf */
+html[data-theme="historic"] .from-amber-glow {
+  background-image: none !important;
+  background-color: #7a2e22 !important;
+  color: #f7ecd0 !important;
+  border: 2px double #d9bf8a;
+  box-shadow: 0 2px 5px rgba(65, 39, 20, 0.35);
+  font-family: var(--font-historic-heading), Georgia, serif;
+}
+
+/* Listenzeilen auf der Einstellungsseite */
+html[data-theme="historic"] .bg-white\/60 {
+  background-color: rgba(247, 235, 204, 0.7) !important;
+}
+
+/* Navigation (mobil): Pergamentschilder */
+html[data-theme="historic"] nav a,
+html[data-theme="historic"] nav button {
+  color: var(--historic-ink) !important;
+  border: 1px solid rgba(91, 57, 31, 0.46) !important;
+  background: linear-gradient(#f4e7c7, #dfc796) !important;
+  box-shadow: 0 2px 6px rgba(65, 39, 20, 0.18) !important;
+  border-radius: 0.45rem !important;
+}
+
+html[data-theme="historic"] nav [class*="bg-blue-6"],
+html[data-theme="historic"] nav [class*="bg-blue-7"],
+html[data-theme="historic"] nav [aria-current="page"] {
+  color: #f7ecd0 !important;
+  background: linear-gradient(#8a5a37, #5e3a22) !important;
+}
+
+/* Texte in der Designkarte */
+html[data-theme="historic"] .theme-settings-copy p,
+html[data-theme="historic"] .theme-choice-text span {
+  color: var(--historic-ink);
+}
+
+html[data-theme="historic"] .theme-choice-text small {
+  color: var(--historic-muted);
+}
+
+/* Desktop-Seitenleiste */
+html[data-theme="historic"] .sidebar-link {
+  color: var(--historic-ink) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 0.45rem !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="historic"] .sidebar-link:hover {
+  background: rgba(247, 235, 204, 0.7) !important;
+  border-color: rgba(91, 57, 31, 0.35) !important;
+}
+
+html[data-theme="historic"] .sidebar-link-active {
+  color: #f7ecd0 !important;
+  border-color: #4b2f1c !important;
+  background: linear-gradient(#8a5a37, #5e3a22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.35), 0 3px 8px rgba(65, 39, 20, 0.3) !important;
+}
+
+/* Emojis in der Seitenleiste: Sepia statt bunt */
+html[data-theme="historic"] .sidebar-link span {
+  filter: sepia(0.9) saturate(0.6) brightness(0.85);
+}
+
+/* Violette Textfarben (z. B. + und −) in Tintenbraun */
+html[data-theme="historic"] [class*="text-violet"],
+html[data-theme="historic"] [class*="text-lavender"] {
+  color: var(--historic-line) !important;
+}
+
+
+/* Emojis in Sepia */
+html[data-theme="historic"] .emoji-icon {
+  display: inline-block;
+  filter: sepia(1) saturate(0.55) brightness(0.8);
+}
+
+/* Symbole je nach Design umschalten */
+.theme-icon-historic {
+  display: none;
+}
+
+[data-theme="historic"] .theme-icon-modern {
+  display: none;
+}
+
+[data-theme="historic"] .theme-icon-historic {
+  display: inline;
+  color: #5c3d22;
+}
+
+/* Ringe (Ehe, Partnerschaft, Trennung) und Scheidungsstrich: Tusche statt Orange/Grau/Rot */
+[data-theme="historic"] circle[stroke="#ffb347"] { stroke: #5c3d22; }
+[data-theme="historic"] circle[stroke="#94a3b8"],
+[data-theme="historic"] circle[stroke="#64748b"] { stroke: #8a7a68; }
+[data-theme="historic"] line[stroke="#e11d48"]   { stroke: #7a2e22; }
+
+/* Danger-Button historisch: dunkles Siegelrot */
+html[data-theme="historic"] .from-rose-400 {
+  background-image: none !important;
+  background-color: #7a2e22 !important;
+  color: #f7ecd0 !important;
+  border: 1px solid #4b2f1c !important;
+  border-radius: 0.45rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.3), 0 3px 8px rgba(65, 39, 20, 0.3) !important;
+}
+
+/* Fokus-Rahmen der Eingabefelder in Tintenbraun */
+html[data-theme="historic"] .field-input:focus {
+  --tw-ring-color: rgba(112, 74, 48, 0.45) !important;
+  border-color: #704a30 !important;
+  outline: none;
+}
+
+/* Feldbeschriftungen */
+html[data-theme="historic"] .field-label {
+  color: var(--historic-ink) !important;
+}
+
+/* Ehe-Ringe historisch: Tintenbraun statt Orange */
+html[data-theme="historic"] svg circle,
+html[data-theme="historic"] svg ellipse {
+  stroke: var(--historic-line) !important;
+}
+
+/* Initialen im Siegel-Kreis: gut lesbare Schrift statt Fraktur */
+html[data-theme="historic"] .from-amber-glow {
+  font-family: var(--font-historic-body), Georgia, serif !important;
+  font-weight: 700;
+}

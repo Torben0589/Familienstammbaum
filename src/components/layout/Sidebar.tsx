@@ -17,7 +17,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 shrink-0 hidden md:flex flex-col gap-2 p-5">
       <div className="px-3 py-4 mb-2">
-        <div className="text-xl font-semibold text-ink-900">🌼 Familienstammbaum</div>
+        <div className="text-xl font-semibold text-ink-900"><span className="theme-icon-modern"><span className="emoji-icon">🌼</span></span><span className="theme-icon-historic">❦</span> Familienstammbaum</div>
         <div className="text-xs text-ink-500 mt-1">Unsere Familiengeschichte</div>
       </div>
       {links.map((link) => {

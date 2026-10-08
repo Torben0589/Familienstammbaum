@@ -99,7 +99,7 @@ export function PersonDetail({ personId }: { personId: string }) {
             </div>
             {(person.birthPlace || person.deathPlace) && (
               <p className="text-sm text-ink-500 mt-1">
-                {person.birthPlace && <>📍 geboren in {person.birthPlace} </>}
+                {person.birthPlace && <><span className="theme-icon-modern">📍</span><span className="theme-icon-historic">❦</span> geboren in {person.birthPlace} </>}
                 {person.deathPlace && <>· gestorben in {person.deathPlace}</>}
               </p>
             )}

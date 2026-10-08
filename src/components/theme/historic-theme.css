@@ -368,3 +368,26 @@ html[data-theme="historic"] .from-amber-glow {
   font-family: var(--font-historic-body), Georgia, serif !important;
   font-weight: 700;
 }
+
+/* Ringe (Ehe, Partnerschaft, Trennung) und Scheidungsstrich: Tusche statt Orange/Grau/Rot */
+[data-theme="historic"] circle[stroke="#ffb347"] { stroke: #5c3d22; }
+[data-theme="historic"] circle[stroke="#94a3b8"],
+[data-theme="historic"] circle[stroke="#64748b"] { stroke: #8a7a68; }
+[data-theme="historic"] line[stroke="#e11d48"]   { stroke: #7a2e22; }
+
+/* Chips historisch v2: Geschlecht und andere Badges */
+html[data-theme="historic"] span[class*="rounded-full"][class*="bg-"] {
+  background: #efe3c2 !important;
+  background-image: none !important;
+  border: 1px solid #8a6a45 !important;
+  color: #5c3d22 !important;
+  font-family: var(--font-historic-body), Georgia, serif;
+  box-shadow: inset 0 0 0 2px rgba(255, 248, 221, 0.5);
+}
+
+html[data-theme="historic"] span[class*="rounded-full"][class*="text-rose"],
+html[data-theme="historic"] span[class*="rounded-full"][class*="text-sky"],
+html[data-theme="historic"] span[class*="rounded-full"][class*="text-blue"],
+html[data-theme="historic"] span[class*="rounded-full"][class*="text-pink"] {
+  color: #5c3d22 !important;
+}

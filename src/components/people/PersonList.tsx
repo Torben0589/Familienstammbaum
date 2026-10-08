@@ -56,7 +56,7 @@ export function PersonList() {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <GenderBadge gender={p.gender} />
-                  {p.birthPlace && <span className="text-xs text-ink-500 truncate">📍 {p.birthPlace}</span>}
+                  {p.birthPlace && <span className="text-xs text-ink-500 truncate"><span className="theme-icon-modern">📍</span><span className="theme-icon-historic">❦</span> {p.birthPlace}</span>}
                 </div>
               </Card>
             </Link>

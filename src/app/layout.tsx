@@ -26,10 +26,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
+    <html suppressHydrationWarning
       lang="de"
       className={`${historicBody.variable} ${historicHeading.variable}`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("familienstammbaum-theme")==="historic"){document.documentElement.dataset.theme="historic"}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className={inter.variable + " font-sans min-h-screen"}>{children}</body>
     </html>
   );

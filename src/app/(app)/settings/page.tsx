@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
+import { ThemeSelector } from "@/components/theme/ThemeSelector";
 
 interface UserAccount {
   id: string;
@@ -81,8 +82,10 @@ export default function SettingsPage() {
     <div className="pt-6 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-semibold text-ink-900">Einstellungen</h1>
-        <p className="text-ink-500 mt-1">Verwalte Zugänge und tausche Daten mit anderen Programmen aus.</p>
-      </div>
+        <p className="text-ink-500 mt-1">Verwalte Zugänge und tausche Daten mit anderen Programmen aus.</p>  
+    </div>
+
+   <ThemeSelector />
 
       <Card>
         <h2 className="font-semibold text-ink-900 mb-1">Familienmitglieder mit Zugang</h2>

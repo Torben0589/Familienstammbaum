@@ -391,3 +391,15 @@ html[data-theme="historic"] span[class*="rounded-full"][class*="text-blue"],
 html[data-theme="historic"] span[class*="rounded-full"][class*="text-pink"] {
   color: #5c3d22 !important;
 }
+
+/* Vorschlagsliste historisch (PersonPicker) */
+html[data-theme="historic"] [class*="z-[9999]"] {
+  background: #f4e7c7 !important;
+  border: 1px solid #8a6a45 !important;
+  border-radius: 0.45rem !important;
+  box-shadow: 0 8px 18px rgba(69, 42, 21, 0.25) !important;
+}
+
+html[data-theme="historic"] [class*="z-[9999]"] button:hover {
+  background: rgba(138, 106, 69, 0.15) !important;
+}

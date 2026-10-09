@@ -6,7 +6,7 @@ import { fullName, lifeSpan } from "@/lib/utils";
 import type { PersonDTO } from "@/types";
 
 export function PersonPicker({
-  excludeIds = [],
+  excludeIds,
   onSelect,
   placeholder = "Person suchen…"
 }: {
@@ -18,20 +18,25 @@ export function PersonPicker({
   const [results, setResults] = useState<PersonDTO[]>([]);
   const [open, setOpen] = useState(false);
 
+  // Stabiler Schlüssel statt Array-Referenz: ändert sich nur, wenn sich die IDs wirklich ändern.
+  const excludeKey = (excludeIds ?? []).join(",");
+
   useEffect(() => {
     if (!query.trim()) {
-      setResults([]);
+      // Nur setzen, wenn nötig, damit kein unnötiger Re-Render entsteht.
+      setResults((prev) => (prev.length === 0 ? prev : []));
       return;
     }
+    const excluded = excludeKey ? excludeKey.split(",") : [];
     const timeout = setTimeout(async () => {
       const res = await fetch(`/api/people?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data: PersonDTO[] = await res.json();
-        setResults(data.filter((p) => !excludeIds.includes(p.id)));
+        setResults(data.filter((p) => !excluded.includes(p.id)));
       }
     }, 200);
     return () => clearTimeout(timeout);
-  }, [query, excludeIds]);
+  }, [query, excludeKey]);
 
   return (
     <div className="relative">

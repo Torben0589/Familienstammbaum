@@ -7,6 +7,8 @@ import { initials } from "@/lib/utils";
 import { PersonPicker } from "@/components/people/PersonPicker";
 import { FamilyStatisticsPanel } from "@/components/family/FamilyStatisticsPanel";
 import { RelationshipCalculator } from "@/components/family/RelationshipCalculator";
+import { LineagePanel } from "@/components/family/LineagePanel";
+import type { LineageFocus } from "@/lib/lineage";
 import type { CoupleDTO, FamilyGraph, PartnershipType, PersonDTO, TreeNode } from "@/types";
 
 // ROUTING-START
@@ -436,6 +438,9 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [highlightedId, setHighlightedId] = useState<string | undefined>(undefined);
   const [showStatistics, setShowStatistics] = useState(false);
   const [showRelationship, setShowRelationship] = useState(false);
+  const [showLineage, setShowLineage] = useState(false);
+  const [focus, setFocus] = useState<LineageFocus | null>(null);
+  const focusIds = useMemo(() => (focus ? new Set(focus.ids) : null), [focus]);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
@@ -653,11 +658,15 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
           <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setShowRelationship((v) => !v)}>
             Verwandtschaft
           </button>
+          <button className="glow-button-secondary !py-2 !px-3 text-sm" onClick={() => setShowLineage((v) => !v)}>
+            Blutlinie
+          </button>
         </div>
       </div>
 
       {showStatistics && <div className="glass-card p-4 relative z-[99999]"><h2 className="text-lg font-semibold text-ink-900 mb-3">Familienstatistik</h2><FamilyStatisticsPanel graph={graph} nodes={nodes} /></div>}
       {showRelationship && <div className="glass-card p-4 relative z-[99999]"><h2 className="text-lg font-semibold text-ink-900 mb-3">Verwandtschaftsrechner</h2><RelationshipCalculator graph={graph} /></div>}
+      {showLineage && <div className="glass-card p-4 relative z-[99999]"><h2 className="text-lg font-semibold text-ink-900 mb-3">Blutlinie und Verwandtschaft hervorheben</h2><LineagePanel graph={graph} onChange={setFocus} /></div>}
 
       {nodes.length === 0 ? (
         <div className="glass-card p-10 text-center text-ink-500">
@@ -692,6 +701,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
               width={contentWidth}
               height={contentHeight}
               className="absolute inset-0 pointer-events-none"
+              style={{ opacity: focusIds ? 0.3 : 1, transition: "opacity 0.2s" }}
             >
               {partnerLines.map((l) => {
                 const type = coupleByPair.get(l.key)?.type;
@@ -767,7 +777,7 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                   onPointerUp={(e) => onPersonPointerUp(e, n.person.id)}
                   onClick={onPersonClick}
                   onDragStart={(e) => e.preventDefault()}
-                  className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-all ring-2 ${genderRing[n.person.gender] ?? ""} ${highlightedId === n.person.id ? "ring-4 ring-amber-400 shadow-glow-lg scale-105 z-10" : ""}`}
+                  className={`glass-card !rounded-2xl !p-3 flex items-center gap-2.5 hover:shadow-glow-lg transition-all ring-2 ${genderRing[n.person.gender] ?? ""} ${highlightedId === n.person.id ? "ring-4 ring-amber-400 shadow-glow-lg scale-105 z-10" : ""} ${focusIds && !focusIds.has(n.person.id) ? "opacity-20 grayscale" : ""}`}
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-glow to-lavender-glow text-white flex items-center justify-center text-xs font-semibold shrink-0">
                     {initials(n.person)}

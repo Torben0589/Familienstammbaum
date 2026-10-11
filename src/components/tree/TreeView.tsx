@@ -441,6 +441,17 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
   const [showLineage, setShowLineage] = useState(false);
   const [focus, setFocus] = useState<LineageFocus | null>(null);
   const focusIds = useMemo(() => (focus ? new Set(focus.ids) : null), [focus]);
+  const isPartnerLineDim = (key: string): boolean => {
+    if (!focusIds) return false;
+    const [a, b] = key.split("|");
+    return !(focusIds.has(a) && focusIds.has(b));
+  };
+  const isChildLineDim = (key: string): boolean => {
+    if (!focusIds) return false;
+    const childId = key.replace(/-parents$/, "");
+    const node = nodeByPerson.get(childId);
+    return !(focusIds.has(childId) && !!node && node.parentIds.some((id) => focusIds.has(id)));
+  };
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: PADDING, y: PADDING });
@@ -701,7 +712,6 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
               width={contentWidth}
               height={contentHeight}
               className="absolute inset-0 pointer-events-none"
-              style={{ opacity: focusIds ? 0.3 : 1, transition: "opacity 0.2s" }}
             >
               {partnerLines.map((l) => {
                 const type = coupleByPair.get(l.key)?.type;
@@ -717,14 +727,27 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                     strokeWidth={3}
                     strokeLinecap="round"
                     strokeDasharray={style?.dash}
-                    opacity={style?.opacity ?? 0.6}
+                    opacity={(style?.opacity ?? 0.6) * (isPartnerLineDim(l.key) ? 0.2 : 1)}
                   />
                 );
               })}
 
               {/* Gruppe mit Deckkraft: Wo sich Linien einer Familie überlagern, entsteht kein dunklerer Strich. */}
+              <g opacity={0.12}>
+                {childLines.filter((l) => isChildLineDim(l.key)).map((l) => (
+                  <path
+                    key={l.key}
+                    d={l.path}
+                    fill="none"
+                    stroke="#a78bfa"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </g>
               <g opacity={0.55}>
-                {childLines.map((l) => (
+                {childLines.filter((l) => !isChildLineDim(l.key)).map((l) => (
                   <path
                     key={l.key}
                     d={l.path}
@@ -745,13 +768,14 @@ export function TreeView({ graph }: { graph: FamilyGraph }) {
                 if (gap < SYMBOL_MIN_GAP) return null;
                 const size = Math.min(SYMBOL_MAX_SIZE, gap - 8);
                 return (
-                  <PartnerSymbol
-                    key={`${l.key}-symbol`}
+                  <g key={`${l.key}-symbol`} opacity={isPartnerLineDim(l.key) ? 0.2 : 1}>
+                    <PartnerSymbol
                     type={type}
                     cx={(l.x1 + l.x2) / 2}
                     cy={(l.y1 + l.y2) / 2 - size * 0.45 - 4}
                     size={size}
                   />
+                  </g>
                 );
               })}
             </svg>
